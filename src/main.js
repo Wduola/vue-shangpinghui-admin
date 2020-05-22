@@ -30,14 +30,6 @@ Vue.component('CategorySelector', CategorySelector)
 Vue.prototype.$hasBP = hasBtnPermission
 Vue.prototype.$API = API // 将包含所有接口请求函数的对象让所有组件可见
 
-/**
- * If you don't want to use mock-server
- * you want to use MockJs for mock api
- * you can execute: mockXHR()
- *
- * Currently MockJs will be used in the production environment,
- * please remove it before going online ! ! !
- */
 if (process.env.NODE_ENV === 'production') {
   const { mockXHR } = require('../mock')
   mockXHR()

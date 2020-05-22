@@ -61,15 +61,23 @@
       :title="form.id ? '更新品牌' : '添加品牌'"
       :visible.sync="isShowDialog"
     >
-      <el-form :model="form">
-        <el-form-item label="品牌名称" :label-width="formLabelWidth">
+      <el-form :model="form" style="width: 80%" :rules="rules" ref="tmForm">
+        <el-form-item
+          label="品牌名称"
+          :label-width="formLabelWidth"
+          prop="tmName"
+        >
           <el-input
             v-model="form.tmName"
             autocomplete="off"
             placeholder="请输入品牌名称"
           ></el-input>
         </el-form-item>
-        <el-form-item label="品牌LOGO" :label-width="formLabelWidth">
+        <el-form-item
+          label="品牌LOGO"
+          :label-width="formLabelWidth"
+          prop="logoUrl"
+        >
           <el-upload
             class="avatar-uploader"
             action="/dev-api/admin/product/fileUpload"
@@ -111,7 +119,17 @@ export default {
         tmName: "", //品牌名称
         logoUrl: "" //品牌logo地址
       },
-      formLabelWidth: "100px"
+      formLabelWidth: "100px",
+
+      // dialog表单验证
+      rules: {
+        tmName: [
+          { required: true, message: "请输入品牌名称", trigger: "change" }, //值发生改变时触发
+          // { min: 2, max: 10, message: "长度在 2 到 10 个字符", trigger: "blur" } //失去焦点触发
+          { validator: this.validateTmName, trigger: "blur" } //validator校验器: 用于校验的回调函数
+        ],
+        logoUrl: [{ required: true, message: "请添加品牌LOGO图片" }]
+      }
     };
   },
   mounted() {
@@ -171,31 +189,48 @@ export default {
       this.getTrademarks();
     },
 
-    // 添加或更新品牌
-    async addOrUpdateTrademark() {
-      // 取得请求需要的数据
-      const trademark = this.form;
-      let result;
-      // 判断trademark中有id 更新请求 否则添加
-      if (trademark.id) {
-        result = await this.$API.trademark.update(trademark);
+    // 校验品牌名称的自定义校验函数
+    validateTmName(rule, value, callback) {
+      if (value.length < 2 || value.length > 10) {
+        callback(new Error("长度在 2 到 10 个字符"));
       } else {
-        result = await this.$API.trademark.add(trademark);
+        callback();
       }
-      if (result.code === 200) {
-        // 成功，重新显示新的品牌列表，隐藏dialog 提示
-        this.$message.success(`${trademark.id ? "更新" : "添加"}品牌成功`);
-        this.isShowDialog = false;
-        this.getTrademarks(trademark.id ? this.page : 1);
-        // 清除数据
-        this.form = {
-          tmName: "",
-          logoUrl: ""
-        };
-      } else {
-        // 失败，提示错误信息
-        this.$message.error(`${trademark.id ? "更新" : "添加"} 品牌失败`);
-      }
+    },
+
+    // 添加或更新品牌 校验品牌
+    addOrUpdateTrademark() {
+      // 先进行表单验证
+      this.$refs.tmForm.validate(async valid => {
+        if (valid) {
+          // 取得请求需要的数据
+          const trademark = this.form;
+          let result;
+          // 判断trademark中有id 更新请求 否则添加
+          if (trademark.id) {
+            result = await this.$API.trademark.update(trademark);
+          } else {
+            result = await this.$API.trademark.add(trademark);
+          }
+
+          if (result.code === 200) {
+            // 成功，重新显示新的品牌列表，隐藏dialog 提示
+            this.$message.success(`${trademark.id ? "更新" : "添加"}品牌成功`);
+            this.isShowDialog = false;
+            this.getTrademarks(trademark.id ? this.page : 1);
+            // 清除数据
+            this.form = {
+              tmName: "",
+              logoUrl: ""
+            };
+          } else {
+            // 失败，提示错误信息
+            this.$message.error(`${trademark.id ? "更新" : "添加"} 品牌失败`);
+          }
+        } else {
+          //没通过，什么也不做（可以不写else）
+        }
+      });
     },
 
     // 显示添加弹窗
@@ -208,18 +243,10 @@ export default {
       this.isShowDialog = true;
     },
 
-    // 显示修改界面
-    showUpdate(trademark) {
-      // 将当前品牌对象保存到form ==> 用于在dialog中显示
-      this.form = trademark;
-      // 显示
-      this.isShowDialog = true;
-    },
-
     // 修改品牌信息
-    showUpdata(trademark) {
+    showUpdate(trademark) {
       // 将当前的form数据保存到trademark中
-      this.form = trademark;
+      this.form = { ...trademark }; //form和trademark指向不再是同一个对象   对象的浅拷贝
       // 显示需要修改的dialog
       this.isShowDialog = true;
     },
