@@ -117,24 +117,18 @@ export default {
   },
 
   methods: {
-    /*
-    显示Sku详情信息
-    */
+    // 显示Sku详情信息
     showSkuInfo(skuId) {
       this.$message.info("课上实现");
     },
 
-    /*
-    当页码发生改变自动调用
-    */
+    // 当页码发生改变自动调用
     changeSize(size) {
       this.limit = size;
       this.getSkuList(1);
     },
 
-    /*
-    异步获取指定页码的sku列表
-    */
+    // 异步获取指定页码的sku列表
     async getSkuList(page = 1) {
       this.page = page;
       this.loading = true;
@@ -144,9 +138,7 @@ export default {
       this.total = result.data.total;
     },
 
-    /*
-    对指定SKU进行上架的请求
-    */
+    // 对指定SKU进行上架的请求
     onSale(skuId) {
       this.$API.sku.onSale(skuId).then(result => {
         this.$message({
@@ -157,9 +149,7 @@ export default {
       });
     },
 
-    /*
-    对指定SKU进行下架的请求
-    */
+    // 对指定SKU进行下架的请求
     cancelSale(skuId) {
       this.$API.sku.cancelSale(skuId).then(result => {
         this.$message({
@@ -170,16 +160,12 @@ export default {
       });
     },
 
-    /*
-    到SKU的更新界面去
-    */
+    // 到SKU的更新界面去
     toUpdateSku(skuId) {
       this.$message.warning("缺少接口的支持, 待开发!");
     },
 
-    /*
-    删除SKU
-    */
+    // 删除SKU
     async deleteSku(skuId) {
       const result = await this.$API.sku.remove(skuId);
       if (result.code === 200) {

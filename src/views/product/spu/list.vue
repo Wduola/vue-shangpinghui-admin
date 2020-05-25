@@ -81,9 +81,10 @@
         ref="skuForm"
         v-show="isShowSkuForm"
         @cancel="isShowSkuForm = false"
+        :saveSuccess="() => (isShowSkuForm = false)"
       ></SkuForm>
     </el-card>
-    
+
     <!--收货地址 弹窗  -->
     <el-dialog title="收货地址" :visible.sync="isShowSkuList">
       <el-table :data="skuList" border>
