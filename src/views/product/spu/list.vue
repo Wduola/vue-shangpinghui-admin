@@ -1,17 +1,17 @@
 <template>
   <div>
-    <!-- 三级分类 -->
-    <el-card class="box-card">
-      <CategorySelector @categoryChange="handleCategoryChange" />
+    <el-card style="margin-bottom: 20px">
+      <category-selector
+        @categoryChange="handleCategoryChange"
+      ></category-selector>
     </el-card>
-
-    <!-- spu列表 -->
-    <el-card border stripe style="margin-top:20px">
+    <el-card>
       <div v-show="!isShowSpuForm && !isShowSkuForm">
         <el-button
           type="primary"
           icon="el-icon-plus"
           style="margin-bottom: 20px"
+          @click="showAddSpu"
           >添加SPU</el-button
         >
         <el-table v-loading="loading" :data="spuList" border stripe>
@@ -28,7 +28,7 @@
                 type="primary"
                 icon="el-icon-plus"
                 size="mini"
-                @click="showSkuAdd"
+                @click="showSkuAdd(row)"
               ></hint-button>
               <hint-button
                 title="修改SPU"
@@ -42,6 +42,7 @@
                 type="info"
                 icon="el-icon-info"
                 size="mini"
+                @click="showSkuList(row)"
               ></hint-button>
               <hint-button
                 title="删除SPU"
@@ -56,7 +57,7 @@
           background
           style="text-align: center; margin-top: 20px;"
           :current-page="page"
-          :page-sizes="[3, 6, 9, 12]"
+          :page-sizes="[10, 20, 30, 40]"
           :page-size="limit"
           layout="prev, pager, next, jumper, ->, sizes, total"
           :total="total"
@@ -64,16 +65,46 @@
           @size-change="handleSizeChange"
         />
       </div>
+      <!-- @update:visible="isShowSpuForm=$event" -->
+      <!--
+        一旦使用.sync, 必须是一个动态的变量属性值, 且属性名必须使用:
+        但如果不加:, 传递给子组件的总是false值
+       -->
+      <SpuForm
+        ref="spuForm"
+        :visible.sync="isShowSpuForm"
+        @saveSuccess="handleSaveSuccess"
+        @cancel="handleCancel"
+      ></SpuForm>
 
-      <SpuForm ref="spuForm" :visible.sync="isShowSpuForm"></SpuForm>
-
-      <SkuForm v-show="isShowSkuForm"></SkuForm>
+      <SkuForm
+        ref="skuForm"
+        v-show="isShowSkuForm"
+        @cancel="isShowSkuForm = false"
+      ></SkuForm>
     </el-card>
+    
+    <!--收货地址 弹窗  -->
+    <el-dialog title="收货地址" :visible.sync="isShowSkuList">
+      <el-table :data="skuList" border>
+        <el-table-column property="skuName" label="名称"></el-table-column>
+        <el-table-column property="price" label="价格(元)"></el-table-column>
+        <el-table-column property="weight" label="重量(KG)"></el-table-column>
+        <el-table-column label="默认图片">
+          <template slot-scope="{ row }">
+            <img
+              :src="row.skuDefaultImg"
+              alt=""
+              style="width: 100px;height:100px"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import cloneDeep from "lodash/cloneDeep"; // 只引入要使用的工具函数
 import SpuForm from "../components/SpuForm";
 import SkuForm from "../components/SkuForm";
 export default {
@@ -85,27 +116,71 @@ export default {
       category2Id: "", // 二级分类ID
       category3Id: "", // 三级分类ID
 
-      isShowList: true, // 是否显示属性列表页面   true: 列表页面, false: 添加或更新页面
-
       spuList: [],
-
-      trademarks: [], //当前页的列表数据
       total: 0, //总数量
       page: 1, //当前页码
-      limit: 5, //每页数量
+      limit: 10, //每页数量
       loading: false, //图片加载
 
       isShowSpuForm: false,
-      isShowSkuForm: false
+      isShowSkuForm: false,
+
+      isShowSkuList: false, // 是否显示sku列表
+      spu: {}, // 要显示sku列表的spu
+      skuList: [] // 指定spu下所有sku的列表
     };
   },
 
   mounted() {
+    this.category1Id = 2;
+    this.category2Id = 13;
     this.category3Id = 61;
     this.getSpuList();
   },
 
   methods: {
+    // 显示指定spu下所有sku的列表
+    async showSkuList(spu) {
+      this.isShowSkuList = true;
+      this.spu = spu;
+      // 异步请求获取sku列表
+      const result = await this.$API.sku.getListBySpuId(spu.id);
+      this.skuList = result.data;
+    },
+
+    // SPU保存操作取消的事件监听回调
+    handleCancel() {
+      // 重置更新的标识
+      this.spuId = null;
+    },
+
+    // Spu保存成功的事件监听回调
+    handleSaveSuccess() {
+      // 重新获取分页列表
+      // 如果是添加, 显示第一页, 如果是更新显示当前页
+      this.getSpuList(this.spuId ? this.page : 1);
+
+      // 重置更新的标识
+      this.spuId = null;
+    },
+
+    // 显示SPU的添加界面
+    showAddSpu() {
+      this.isShowSpuForm = true;
+      // 通知SpuForm请求添加界面初始数据显示
+      this.$refs.spuForm.initLoadAddData(this.category3Id);
+    },
+
+    // 显示SPU的修改界面
+    showUpdateSpu(id) {
+      // 保存更新的标识
+      this.spuId = id;
+      // 显示SpuForm修改界面
+      this.isShowSpuForm = true;
+      // 通知SpuForm根据传入的ID请求获取初始显示需要的数据
+      this.$refs.spuForm.initLoadUpdateData(id);
+    },
+
     // 选择新的分类的监听回调
     handleCategoryChange({ categoryId, level }) {
       if (level === 1) {
@@ -124,21 +199,6 @@ export default {
       }
     },
 
-    // 显示SPU的修改界面
-    showUpdateSpu(id) {
-      // 显示SpuForm修改界面
-      this.isShowSpuForm = true;
-
-      // 通知SpuForm根据传入的ID请求获取初始显示需要的数据
-      // 使用的是v-show来隐藏的, 隐藏时组件对象还在存在
-      this.$refs.spuForm.initLoadUpdateData(id);
-    },
-
-    // 显示SKU添加的表单界面
-    showSkuAdd() {
-      this.isShowSkuForm = true;
-    },
-
     // 获取指定页码的列表数据 (spuList, total)
     async getSpuList(page = 1) {
       this.page = page;
@@ -151,6 +211,24 @@ export default {
       }
     },
 
+    // 每页数量改变的监听回调
+    handleSizeChange(pageSize) {
+      // 更新limit数据
+      this.limit = pageSize;
+      // 重新请求获取第一页列表显示
+      this.getSpuList(1);
+    },
+
+    // 显示SKU添加的表单界面
+    showSkuAdd(spu) {
+      this.isShowSkuForm = true;
+      spu = { ...spu }; // 对spu进行浅拷贝, 以免更新列表中数据对象
+      spu.category1Id = this.category1Id;
+      spu.category2Id = this.category2Id;
+      // 让skuForm去请求加载初始显示需要的数据
+      this.$refs.skuForm.initLoadAddData(spu);
+    },
+
     // 3个级别分类发生改变时的监听回调
     handleCategoryChange({ categoryId, level }) {
       // console.log('handleCategoryChange', categoryId, level)
@@ -159,67 +237,17 @@ export default {
         // 重置2级和3级ID和属性列表
         this.category2Id = "";
         this.category3Id = "";
-        this.attrs = [];
+        (this.spuList = []), (this.total = 0);
       } else if (level === 2) {
         this.category2Id = categoryId;
         // 重置3级ID和属性列表
         this.category3Id = "";
-        this.attrs = [];
+        (this.spuList = []), (this.total = 0);
       } else {
         this.category3Id = categoryId;
         // 异步请求获取属性列表显示
-        this.getAttrs();
+        this.getSpuList();
       }
-    },
-
-    // 异步请求获取属性列表显示
-    async getAttrs() {
-      const { category1Id, category2Id, category3Id } = this;
-      const result = await this.$API.attr.getList(
-        category1Id,
-        category2Id,
-        category3Id
-      );
-      this.attrs = result.data;
-    },
-
-    // 更新每页数据函数
-    async getTrademarks(page = 1) {
-      this.page = page;
-      // 发送请求前获取数据，显示loading
-      this.loading = true;
-      // 发异步ajax请求获取数据
-      const result = await this.$API.trademark.getList(page, this.limit);
-      // 数据请求完成，隐藏loading
-      this.loading = false;
-      if (result.code === 200) {
-        // 成功，更新列表数据
-        const { records, total } = result.data;
-        this.trademarks = records;
-        this.total = total;
-      } else {
-        // 失败，提示错误信息
-        this.$message.error("获取品牌列表数据失败");
-      }
-    },
-
-    // 每页数量改变的监听回调
-    handleSizeChange(pageSize) {
-      // 更新limit数据
-      this.limit = pageSize;
-      // 重新请求获取第一页列表显示
-      this.getTrademarks();
-    },
-
-    // 显示修改属性的界面
-    showUpdate(attr) {
-      // 保存要修改的属性对象
-      // this.attr = attr // 列表与修改界面引用了同一个属性对象  ==> 修改属性名不能取消
-      // this.attr = {...attr} // 对attr进行了一个浅拷贝(克隆)  ==> 修改属性值名称不能取消
-      this.attr = cloneDeep(attr); // 对attr进行了一个深拷贝(克隆) ==> OK
-
-      // 显示更新的界面(attr中有数据)
-      this.isShowList = false;
     }
   },
 

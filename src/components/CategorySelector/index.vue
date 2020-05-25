@@ -56,6 +56,7 @@
 
 <script>
 export default {
+  name: "CategorySelector",
   data() {
     return {
       disabled: false, // 下拉列表是否禁用
