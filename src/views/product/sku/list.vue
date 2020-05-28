@@ -1,5 +1,6 @@
 <template>
-  <el-card>
+  <el-card class="sku-list">
+    <!-- SKU列表 -->
     <el-table border stripe :data="skuList" v-loading="loading">
       <el-table-column
         type="index"
@@ -83,7 +84,7 @@
         </template>
       </el-table-column>
     </el-table>
-
+    <!-- 分页 -->
     <el-pagination
       :current-page="page"
       :total="total"
@@ -94,6 +95,73 @@
       @current-change="getSkuList"
       @size-change="changeSize"
     />
+    <!-- 详情 -->
+    <el-drawer
+      :visible.sync="isShowSkuInfo"
+      direction="rtl"
+      :withHeader="false"
+      size="50%"
+    >
+      <el-row>
+        <el-col :span="5">名称</el-col>
+        <el-col :span="16">{{ skuInfo.skuName }}</el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="5">描述</el-col>
+        <el-col :span="16">{{ skuInfo.skuDesc }}</el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="5">价格</el-col>
+        <el-col :span="16">{{ skuInfo.price }}</el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="5">平台属性</el-col>
+        <el-col :span="18">
+          <el-tag
+            type="success"
+            style="margin-right: 5px"
+            v-for="value in skuInfo.skuAttrValueList"
+            :key="value.id"
+          >
+            {{ value.attrId + "-" + value.valueId }}
+          </el-tag>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="5">销售属性</el-col>
+        <el-col :span="18">
+          <el-tag
+            type="success"
+            style="margin-right: 5px"
+            v-for="value in skuInfo.skuSaleAttrValueList"
+            :key="value.id"
+          >
+            {{ value.id + "-" + value.saleAttrValueId }}
+          </el-tag>
+        </el-col>
+      </el-row>
+
+      <el-row>
+        <el-col :span="5">商品图片</el-col>
+        <el-col :span="16">
+          <el-carousel
+            class="img-carousel"
+            trigger="click"
+            height="400px"
+            :autoplay="false"
+          >
+            <el-carousel-item
+              v-for="item in skuInfo.skuImageList"
+              :key="item.id"
+            >
+              <img :src="item.imgUrl" alt="" />
+            </el-carousel-item>
+          </el-carousel>
+        </el-col>
+      </el-row>
+    </el-drawer>
   </el-card>
 </template>
 
@@ -108,7 +176,8 @@ export default {
       total: 0, // 数据库中的总记录数
       page: 1, // 默认页码
       limit: 10, // 每页记录数
-      skuInfo: {}
+      skuInfo: {},
+      isShowSkuInfo: false
     };
   },
 
@@ -117,9 +186,16 @@ export default {
   },
 
   methods: {
+    handleClose(close) {
+      this.skuInfo = {};
+      this.isShowSkuInfo = false;
+    },
+
     // 显示Sku详情信息
-    showSkuInfo(skuId) {
-      this.$message.info("课上实现");
+    async showSkuInfo(id) {
+      this.isShowSkuInfo = true;
+      const result = await this.$API.sku.get(id);
+      this.skuInfo = result.data;
     },
 
     // 当页码发生改变自动调用
@@ -185,4 +261,65 @@ export default {
 };
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss">
+.sku-list {
+  // 一定要加此条件限制, 否则是全局修改
+  .el-carousel__indicator {
+    button {
+      /* 所有指示按钮的样式 */
+      width: 8px;
+      height: 8px;
+      display: inline-block;
+      border-radius: 100%;
+      background-color: hotpink;
+    }
+    &.is-active {
+      button {
+        /* 选中的按钮的样式 */
+        background-color: green;
+      }
+    }
+  }
+}
+</style>
+<style lang="scss" scoped>
+.sku-list {
+  .el-row {
+    height: 40px;
+    .el-col {
+      line-height: 40px;
+      &.el-col-5 {
+        font-size: 18px;
+        font-weight: bold;
+        text-align: right;
+        margin-right: 20px;
+      }
+    }
+  }
+  .img-carousel {
+    width: 400px;
+    border: 1px solid #ccc;
+    img {
+      width: 100%;
+      height: 100%;
+    }
+
+    // /deep/ .el-carousel__indicator {
+    //   button {
+    //     /* 所有指示按钮的样式 */
+    //     width: 8px;
+    //     height: 8px;
+    //     display: inline-block;
+    //     border-radius: 100%;
+    //     background-color: hotpink;
+    //   }
+    //   &.is-active {
+    //     button {
+    //       /* 选中的按钮的样式 */
+    //       background-color: green;
+    //     }
+    //   }
+    // }
+  }
+}
+</style>
